@@ -69,26 +69,26 @@ local meta = {
     end,
     __index = {
         search = function(self, opts)
-			local ok, res = ldap:search(cjson.encode({
-				cmd = SEARCH,
-				client = self.client,
-				search = opts,
+            local ok, res = ldap:search(cjson.encode({
+                cmd = SEARCH,
+                client = self.client,
+                search = opts,
             }))
             return ok, ok and cjson.decode(res) or nil
         end,
         close = function(self)
             self.closed = true
-			return ldap:close(cjson.encode({
-				cmd = CLOSE_CLIENT,
-				client = self.client,
-			}))
+            return ldap:close(cjson.encode({
+                cmd = CLOSE_CLIENT,
+                client = self.client,
+            }))
         end,
     }
 }
 
 function _M.new(opts)
     opts.cmd = NEW_CLIENT
-	local ok, res = ldap:new(cjson.encode(opts))
+    local ok, res = ldap:new(cjson.encode(opts))
     if ok then
         res = cjson.decode(res)
         return setmt__gc({
