@@ -1,0 +1,4 @@
+*.so
+*.h
+demo/logs
+demo/*_temp
