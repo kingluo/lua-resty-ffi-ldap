@@ -1,4 +1,3 @@
-local cjson = require("cjson")
 local ldap = require("resty.ffi.ldap")
 
 return function()
