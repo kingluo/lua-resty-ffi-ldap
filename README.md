@@ -34,7 +34,10 @@ which is a popular and active python ldap client library.
 Highlights:
 
 * asyncio support
-* keytab, ad-hoc credential support
+* Full SASL support
+  * DIGEST-MD5 and NTLM
+  * GSSAPI and GSS-SPNEGO (keytab, ad-hoc credential support)
+  * EXTERNAL
 * simple pythonic design
 * based on robust and time-tested C libraries, e.g. libldap2, libsasl2, libkrb5
 
