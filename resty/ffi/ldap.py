@@ -107,15 +107,13 @@ class State:
             conn = await pool.get()
             res = await conn.search(**req["search"])
             await pool.put(conn)
+
             ents = []
             for ent in res:
-                item = {}
-                for (k, v) in ent.items():
-                    if k == 'dn':
-                        item['dn'] = v.__str__()
-                    else:
-                        item[k] = v
+                item = dict(ent)
+                item["dn"] = str(item["dn"])
                 ents.append(item)
+
             data = json.dumps(ents)
             res = C.malloc(len(data))
             C.memcpy(res, data.encode(), len(data))
