@@ -29,7 +29,7 @@
 --
 local cjson = require("cjson")
 require("resty_ffi")
-local ldap = ngx.load_ffi("ffi_python3", "resty.ffi.ldap,init,{}", {is_global=true})
+local ldap = ngx.load_ffi("resty_ffi_python", "resty.ffi.ldap,init,{}", {is_global=true})
 
 local NEW_CLIENT = 1
 local CLOSE_CLIENT = 2
