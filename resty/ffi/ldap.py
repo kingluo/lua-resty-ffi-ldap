@@ -42,12 +42,14 @@ import threading
 import json
 import asyncio
 import traceback
+from enum import Enum
 import bonsai
 from bonsai.asyncio import AIOConnectionPool
 
-NEW_CLIENT=1
-CLOSE_CLIENT=2
-SEARCH=3
+class CMD(Enum):
+    NEW_CLIENT = 1
+    CLOSE_CLIENT = 2
+    SEARCH = 3
 
 class State:
     def __init__(self, cfg):
@@ -60,64 +62,52 @@ class State:
         self.event_loop_thread = t
 
     async def close_client(self, req, task):
-        try:
-            idx = req["client"]
-            client = self.clients[idx]
-            del self.clients[idx]
-            await client.close()
-            C.ngx_http_lua_ffi_respond(task, 0, ffi.NULL, 0)
-        except Exception as exc:
-            tb = traceback.format_exc()
-            print(tb)
-            tb = f"{exc}"
-            res = C.malloc(len(tb))
-            C.memcpy(res, tb.encode(), len(tb))
-            C.ngx_http_lua_ffi_respond(task, 1, res, 0)
+        idx = req["client"]
+        client = self.clients[idx]
+        del self.clients[idx]
+        await client.close()
+        C.ngx_http_lua_ffi_respond(task, 0, ffi.NULL, 0)
 
     async def new_client(self, req, task):
-        try:
-            self.idx += 1
-            idx = self.idx
-            client = bonsai.LDAPClient(req["url"])
-            client.set_credentials(**req["auth"])
-            pool = AIOConnectionPool(client=client, maxconn=req["maxconn"], timeout=3)
-            await pool.open()
+        self.idx += 1
+        idx = self.idx
+        client = bonsai.LDAPClient(req["url"])
+        client.set_credentials(**req["auth"])
+        pool = AIOConnectionPool(client=client, maxconn=req["maxconn"], timeout=3)
+        await pool.open()
 
-            #conn = await pool.get()
-            #print(await conn.whoami())
-            #await pool.put(conn)
+        #conn = await pool.get()
+        #print(await conn.whoami())
+        #await pool.put(conn)
 
-            self.clients[idx] = pool
-            data = json.dumps({"client":idx})
-            res = C.malloc(len(data))
-            C.memcpy(res, data.encode(), len(data))
-            C.ngx_http_lua_ffi_respond(task, 0, res, len(data))
-        except Exception as exc:
-            tb = traceback.format_exc()
-            print(tb)
-            tb = f"{exc}"
-            res = C.malloc(len(tb))
-            C.memcpy(res, tb.encode(), len(tb))
-            C.ngx_http_lua_ffi_respond(task, 1, res, 0)
+        self.clients[idx] = pool
+        data = json.dumps({"client":idx})
+        res = C.malloc(len(data))
+        C.memcpy(res, data.encode(), len(data))
+        C.ngx_http_lua_ffi_respond(task, 0, res, len(data))
 
     async def search(self, req, task):
+        idx = req["client"]
+        pool = self.clients[idx]
+        conn = await pool.get()
+        res = await conn.search(**req["search"])
+        await pool.put(conn)
+
+        ents = []
+        for ent in res:
+            item = dict(ent)
+            item["dn"] = str(item["dn"])
+            ents.append(item)
+
+        data = json.dumps(ents)
+        res = C.malloc(len(data))
+        C.memcpy(res, data.encode(), len(data))
+        C.ngx_http_lua_ffi_respond(task, 0, res, len(data))
+
+    async def dispatch(self, req, task):
         try:
-            idx = req["client"]
-            pool = self.clients[idx]
-            conn = await pool.get()
-            res = await conn.search(**req["search"])
-            await pool.put(conn)
-
-            ents = []
-            for ent in res:
-                item = dict(ent)
-                item["dn"] = str(item["dn"])
-                ents.append(item)
-
-            data = json.dumps(ents)
-            res = C.malloc(len(data))
-            C.memcpy(res, data.encode(), len(data))
-            C.ngx_http_lua_ffi_respond(task, 0, res, len(data))
+            cmd = CMD(req["cmd"]).name.lower()
+            return await getattr(self, cmd)(req, task)
         except Exception as exc:
             tb = traceback.format_exc()
             print(tb)
@@ -140,13 +130,7 @@ class State:
                 break
             r = C.ngx_http_lua_ffi_get_req(task, ffi.NULL)
             req = json.loads(ffi.string(r))
-            cmd = req["cmd"]
-            if cmd == NEW_CLIENT:
-                asyncio.run_coroutine_threadsafe(self.new_client(req, task), self.loop)
-            elif cmd == SEARCH:
-                asyncio.run_coroutine_threadsafe(self.search(req, task), self.loop)
-            elif cmd == CLOSE_CLIENT:
-                asyncio.run_coroutine_threadsafe(self.close_client(req, task), self.loop)
+            asyncio.run_coroutine_threadsafe(self.dispatch(req, task), self.loop)
 
 def init(cfg, tq):
     data = ffi.string(ffi.cast("char*", cfg))
