@@ -88,6 +88,10 @@ assert(ok)
 
 ## Demo
 
+Check this blog for detail:
+
+http://luajit.io/posts/access-windows-adds-kerberos-from-openresty/
+
 ```bash
 # install lua-resty-ffi and lua-resty-ffi-python
 # https://github.com/kingluo/lua-resty-ffi#install-lua-resty-ffi-via-luarocks
