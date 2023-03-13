@@ -89,18 +89,11 @@ assert(ok)
 ## Demo
 
 ```bash
-# install lua-resty-ffi
+# install lua-resty-ffi and lua-resty-ffi-python
 # https://github.com/kingluo/lua-resty-ffi#install-lua-resty-ffi-via-luarocks
 # set `OR_SRC` to your openresty source path
 luarocks config variables.OR_SRC /tmp/tmp.Z2UhJbO1Si/openresty-1.21.4.1
-luarocks install lua-resty-ffi
-
-# make lua-resty-ffi python loader library
-apt install python3-dev python3-pip libffi-dev
-cd /opt
-git clone https://github.com/kingluo/lua-resty-ffi
-cd /opt/lua-resty-ffi/examples/python
-make
+luarocks install lua-resty-ffi-python
 
 apt install libldap2-dev libsasl2-dev heimdal-dev
 
@@ -113,7 +106,7 @@ cd /opt/lua-resty-ffi-ldap/demo
 
 # run nginx
 KRB5_CONFIG="$PWD/krb5.conf" \
-LD_LIBRARY_PATH=/opt/lua-resty-ffi/examples/python:/usr/local/lib/lua/5.1 \
+LD_LIBRARY_PATH=/usr/local/lib/lua/5.1 \
 PYTHONPATH=/opt/lua-resty-ffi-ldap \
 nginx -p $PWD -c nginx.conf
 
